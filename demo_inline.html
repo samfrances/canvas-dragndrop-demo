@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+
+	<head>
+		<title>Canvas multi-layered drag and drop</title>
+
+		<script>
+
+            function MultiCanvas(divID) {
+                this.div = document.getElementById(divID);
+            }
+            MultiCanvas.prototype.spriteSheets = new Array();
+            MultiCanvas.prototype.topSheet = null;
+            MultiCanvas.prototype.width = 500;
+            MultiCanvas.prototype.height = 500;
+            MultiCanvas.prototype.refresh = function() {
+                for (i in this.spriteSheets) {
+                    if (!this.spriteSheets[i].valid) {
+                        this.spriteSheets[i].render();
+                    }
+                }
+            }
+            MultiCanvas.prototype.newSpriteSheet = function(x,y, draggable) {
+                newSheet = new Object();
+                newSheet.x = x;
+                newSheet.y = y;
+                newSheet.canvas = document.createElement('canvas');
+                newSheet.canvas.style.position = 'absolute';
+                newSheet.canvas.style.left = 0;
+                newSheet.canvas.style.top = 30;
+                newSheet.canvas.style.border = "1px solid black";
+                newSheet.canvas.style.marginLeft = "30px";
+                newSheet.canvas.width = this.width;
+
+                newSheet.canvas.height = this.height;
+                newSheet.ctx = newSheet.canvas.getContext('2d');
+                newSheet.valid = false;
+                newSheet.render = function() {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.draw();
+                    this.valid = true;
+                }
+                newSheet.moveTo = function(x, y) {
+                    this.x = x;
+                    this.y = y;
+                    this.valid = false;
+                }
+                newSheet.draggable = draggable;
+                this.spriteSheets.unshift(newSheet);
+                this.div.appendChild(newSheet.canvas);
+                this.topSheet = newSheet;
+                return newSheet;
+            }
+            MultiCanvas.prototype.init = function() {
+                this.refresh();
+                var spriteSheets = this.spriteSheets;
+                var topSheet = this.topSheet;
+                var mult = this;
+                topSheet.canvas.onmousedown = function(e) {
+                    for (i in spriteSheets) {
+                        if (hitpaint(spriteSheets[i].ctx, e)) {
+                            if (spriteSheets[i].draggable) {
+                                var m = getMouse(topSheet.ctx, e);
+                                var selected = spriteSheets[i];
+                                var offsetX = m.x - selected.x;
+                                var offsetY = m.y - selected.y;
+                                topSheet.canvas.onmousemove = function(e) {
+                                    var m = getMouse(topSheet.ctx, e);
+                                    m.x -= offsetX;
+                                    m.y -= offsetY;
+                                    selected.moveTo(m.x, m.y);
+                                }
+                            }
+                            return;
+                        }
+                    }
+                }
+                topSheet.canvas.onmouseup = function(e) {
+                    topSheet.canvas.onmousemove = null;
+                }
+                setInterval(function() {mult.refresh();}, 20);
+            }
+
+		    function getMouse(context, event) {
+                // Translate and scale mouse event coordinates to canvas coordinates
+                var canvas = context.canvas;
+                var bb = canvas.getBoundingClientRect();
+                var x = (event.clientX-bb.left)*(canvas.width/bb.width);
+                var y = (event.clientY-bb.top)*(canvas.height/bb.height);
+                return {'x': x, 'y': y}
+		    }
+
+            function hitpaint(context, event) {
+                var m = getMouse(context, event);
+                var pixels = context.getImageData(m.x,m.y,1,1);
+                // If any pixels have a nonzero alpha, return true (hit)
+                for(var i = 3; i < pixels.data.length; i+=4) {
+                    if (pixels.data[i] !== 0) return true;
+                }
+                return false;
+            }
+
+            // preload images
+            
+            var cat = new Image();
+            cat.src = 'cat.png';
+
+            var smile = new Image();
+            smile.src = 'smile.png';
+
+            window.onload = function() {
+                            multi = new MultiCanvas('multiCanvas')
+                            multi.newSpriteSheet(10,10, true).draw = function() {
+                                this.ctx.fillStyle = "rgb(200,0,0)";
+                                this.ctx.fillRect(this.x, this.y, 55, 50);
+                            }
+
+
+                            // try an image
+                            
+                            
+                            multi.newSpriteSheet(80,20, true).draw = function() {
+                                this.ctx.drawImage(smile, this.x, this.y);
+                            }
+
+                            multi.newSpriteSheet(20,20, true).draw = function() {
+                                this.ctx.fillStyle = "rgb(100,40,0)";
+                                this.ctx.fillRect(this.x, this.y, 55, 50);
+                            }
+                            
+
+                            multi.newSpriteSheet(200,150, true).draw = function() {
+                                this.ctx.drawImage(cat, this.x, this.y);
+                            }
+                            
+                            multi.init();
+            }
+            
+		</script>
+	</head>
+
+	<body style="background-color:#FFFFFF; color:#000000">
+        
+		<div id="multiCanvas">
+		    <!-- <canvas id="sheet1" width="150" height="150" style="position:absolute; left:0px; right:0px;"></canvas>
+		    <canvas id="sheet2" width="150" height="150" style="position:absolute; left:0px; right:0px;"></canvas> -->
+        </div>
+        
+		<script>
+
+
+
+            
+		</script>
+	
+	</body>
+</html>
